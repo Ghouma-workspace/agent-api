@@ -1,0 +1,118 @@
+# ================================
+# Python
+# ================================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+wheels/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# ================================
+# Environment & secrets
+# ================================
+.env
+.env.*
+!.env.example
+
+# ================================
+# Testing & coverage
+# ================================
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+# ================================
+# Type checking
+# ================================
+.mypy_cache/
+.ruff_cache/
+
+# ================================
+# Node / Frontend
+# ================================
+node_modules/
+frontend/dist/
+frontend/build/
+.npm/
+.eslintcache
+
+# ================================
+# Docker
+# ================================
+.docker/
+
+# ================================
+# Database & local data
+# ================================
+*.sqlite
+*.db
+postgres_data/
+redis_data/
+clickhouse_data/
+minio_data/
+
+# ================================
+# Terraform
+# ================================
+infra/terraform/.terraform/
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfstate
+infra/terraform/terraform.tfstate.backup
+infra/terraform/*.tfvars
+!infra/terraform/example.tfvars
+
+# ================================
+# IDE & editors
+# ================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+
+# ================================
+# Logs
+# ================================
+*.log
+logs/
+
+# ================================
+# Alembic
+# ================================
+# Keep versions/ tracked, ignore only generated temp files
+backend/app/infrastructure/db/migrations/versions/*.pyc
+
+# ================================
+# Grafana & observability local state
+# ================================
+observability/grafana/data/
+
+# ================================
+# Misc
+# ================================
+*.bak
+*.tmp
+.cache/

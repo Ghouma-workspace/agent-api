@@ -1,0 +1,45 @@
+{
+  "title": "AI API Assistant — Platform Overview",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "title": "Requests per minute",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum(rate(http_requests_total[1m])) * 60" }]
+    },
+    {
+      "title": "HTTP p95 latency",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))" }]
+    },
+    {
+      "title": "Agent node latency (p95)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(agent_node_duration_seconds_bucket[5m])) by (le, node))" }]
+    },
+    {
+      "title": "Tool usage frequency",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum(increase(tool_executions_total[1h])) by (tool_name)" }]
+    },
+    {
+      "title": "LLM cost (USD, cumulative)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [{ "expr": "sum(llm_cost_usd_total)" }]
+    },
+    {
+      "title": "Failures & retries",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(failures_total[5m]))", "legendFormat": "failures" },
+        { "expr": "sum(rate(retries_total[5m]))", "legendFormat": "retries" }
+      ]
+    }
+  ]
+}
