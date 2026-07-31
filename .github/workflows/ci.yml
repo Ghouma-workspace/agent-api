@@ -82,7 +82,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
             set -e
-            cd /opt/app
+            cd /opt/app/agent-api
 
             # Pull latest code
             git pull origin main

@@ -51,6 +51,12 @@ resource "aws_instance" "app" {
       -o /usr/local/lib/docker/cli-plugins/docker-compose
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
+    # Install latest buildx
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -SL https://github.com/docker/buildx/releases/latest/download/buildx-v0.21.0.linux-amd64 \
+        -o /usr/local/lib/docker/cli-plugins/docker-buildx
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+
     # Add ec2-user to docker group
     usermod -aG docker ec2-user
 

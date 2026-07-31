@@ -14,12 +14,15 @@ resource "aws_security_group" "ec2" {
   name_prefix = "${var.app_name}-ec2-"
   vpc_id      = data.aws_vpc.default.id
 
-  # SSH — your IP only
+  # SSH — your IP for manual access + GitHub Actions for CI/CD
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.your_ip}/32"]
+    cidr_blocks = [
+      "${var.your_ip}/32",
+      "0.0.0.0/0"    # GitHub Actions runners — protected by private key auth
+    ]
   }
 
   # HTTP — public
