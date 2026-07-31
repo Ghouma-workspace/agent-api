@@ -1,4 +1,4 @@
-# AI API Assistant
+# AI API Assistant (To be updated)
 
 A production-shaped AI platform: a LangGraph agent that calls tools (GitHub, Weather,
 Jira/Notion/Trello/Slack/Stripe stubs) through GroqCloud, wrapped in clean-architecture
