@@ -85,7 +85,8 @@ jobs:
             cd /opt/app/agent-api
 
             # Pull latest code
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             # Rebuild only changed services, no downtime on unchanged ones
             docker compose pull --ignore-pull-failures || true
