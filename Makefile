@@ -13,7 +13,7 @@ migrate:
 	docker compose exec backend alembic upgrade head
 
 test:
-	cd backend && pytest -v --cov=app
+	cd backend && python -m pytest -v --cov=app
 
 lint:
 	cd backend && ruff check . && mypy app
