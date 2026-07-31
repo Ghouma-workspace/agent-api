@@ -1,5 +1,6 @@
 """Repository ports. Infrastructure/db/repositories provides the SQLAlchemy adapters.
 Application services depend only on these Protocols, never on SQLAlchemy directly."""
+
 from __future__ import annotations
 
 from typing import Protocol, runtime_checkable

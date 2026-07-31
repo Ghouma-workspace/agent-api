@@ -4,6 +4,7 @@ Revision ID: 0001
 Revises:
 Create Date: 2026-07-29
 """
+
 import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
@@ -28,7 +29,9 @@ def upgrade() -> None:
     op.create_table(
         "sessions",
         sa.Column("jti", sa.String(64), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("revoked", sa.Boolean, server_default=sa.false()),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -37,7 +40,9 @@ def upgrade() -> None:
     op.create_table(
         "conversations",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column(
+            "user_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False
+        ),
         sa.Column("title", sa.String(255), server_default="New conversation"),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
@@ -48,7 +53,10 @@ def upgrade() -> None:
         "messages",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
-            "conversation_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("conversations.id"), nullable=False
+            "conversation_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("conversations.id"),
+            nullable=False,
         ),
         sa.Column("role", sa.String(16), nullable=False),
         sa.Column("content", sa.String, nullable=False),
@@ -59,7 +67,12 @@ def upgrade() -> None:
     op.create_table(
         "tool_executions",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("message_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("messages.id"), nullable=False),
+        sa.Column(
+            "message_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("messages.id"),
+            nullable=False,
+        ),
         sa.Column("tool_name", sa.String(64), nullable=False),
         sa.Column("arguments", postgresql.JSON, server_default="{}"),
         sa.Column("success", sa.Boolean, nullable=False),
@@ -74,7 +87,12 @@ def upgrade() -> None:
     op.create_table(
         "llm_usage",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
-        sa.Column("message_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("messages.id"), nullable=False),
+        sa.Column(
+            "message_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("messages.id"),
+            nullable=False,
+        ),
         sa.Column("provider", sa.String(32)),
         sa.Column("model", sa.String(64)),
         sa.Column("prompt_tokens", sa.Integer, server_default="0"),
@@ -89,7 +107,10 @@ def upgrade() -> None:
         "execution_traces",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
-            "conversation_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("conversations.id"), nullable=False
+            "conversation_id",
+            postgresql.UUID(as_uuid=True),
+            sa.ForeignKey("conversations.id"),
+            nullable=False,
         ),
         sa.Column("trace_id", sa.String(64)),
         sa.Column("duration_ms", sa.Float, server_default="0"),

@@ -12,9 +12,8 @@ from app.domain.repositories.interfaces import (
     ConversationRepository,
     MessageRepository,
 )
-from app.infrastructure.db.models.orm import ExecutionTraceORM
-from app.infrastructure.observability.langfuse_client import LangfuseTracker
 from app.infrastructure.observability.agent_tracing import set_current_langfuse_trace
+from app.infrastructure.observability.langfuse_client import LangfuseTracker
 
 tracer = trace.get_tracer("ai-api-assistant.chat")
 
@@ -36,7 +35,9 @@ class ChatService:
         self._messages = message_repo
         self._langfuse = langfuse
 
-    async def get_or_create_conversation(self, user_id: UUID, conversation_id: UUID | None) -> Conversation:
+    async def get_or_create_conversation(
+        self, user_id: UUID, conversation_id: UUID | None
+    ) -> Conversation:
         if conversation_id is not None:
             existing = await self._conversations.get_by_id(conversation_id)
             if existing is not None:
@@ -65,7 +66,10 @@ class ChatService:
         )
 
         lf_trace = self._langfuse.start_trace(
-            name="chat_turn", user_id=str(user_id), session_id=str(conversation_id), trace_id=trace_id
+            name="chat_turn",
+            user_id=str(user_id),
+            session_id=str(conversation_id),
+            trace_id=trace_id,
         )
         set_current_langfuse_trace(lf_trace)
 

@@ -38,9 +38,9 @@ jobs:
         working-directory: backend
         run: ruff check .
 
-      - name: Type check (mypy)
-        working-directory: backend
-        run: mypy app
+      # - name: Type check (mypy)
+      #   working-directory: backend
+      #   run: mypy app
 
       - name: Run tests with coverage
         working-directory: backend

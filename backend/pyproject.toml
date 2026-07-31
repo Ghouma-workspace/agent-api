@@ -46,6 +46,12 @@ dev = [
 line-length = 100
 target-version = "py312"
 
+[tool.ruff.lint]
+ignore = [
+    "B008",
+    "BLE001",
+]
+
 [tool.mypy]
 python_version = "3.12"
 strict = true

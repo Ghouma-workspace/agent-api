@@ -1,5 +1,6 @@
 """Framework-free domain entities. These are NOT SQLAlchemy models — infrastructure
 maps ORM rows to/from these at the repository boundary."""
+
 from __future__ import annotations
 
 from datetime import datetime

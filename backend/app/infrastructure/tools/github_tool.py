@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from app.infrastructure.tools.base import (
     BaseToolPlugin,
     ResilientHTTPClient,
@@ -12,7 +14,7 @@ class GitHubTool(BaseToolPlugin):
 
     name = "github"
     description = "List the user's GitHub repositories or create an issue in a repository."
-    parameters_schema = {
+    parameters_schema: ClassVar[dict] = {
         "type": "object",
         "properties": {
             "action": {"type": "string", "enum": ["list_repos", "create_issue"]},

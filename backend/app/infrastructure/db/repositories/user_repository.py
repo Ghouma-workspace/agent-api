@@ -65,7 +65,9 @@ class SqlAlchemySessionRepository:
             await self._session.flush()
 
     async def revoke_all_for_user(self, user_id: UUID) -> None:
-        result = await self._session.execute(select(SessionORM).where(SessionORM.user_id == user_id))
+        result = await self._session.execute(
+            select(SessionORM).where(SessionORM.user_id == user_id)
+        )
         for row in result.scalars():
             row.revoked = True
         await self._session.flush()

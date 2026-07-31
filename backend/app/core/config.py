@@ -3,6 +3,7 @@
 All configuration is read from environment variables (12-factor). Nothing in the rest
 of the codebase should call `os.environ` directly — inject `Settings` instead.
 """
+
 from functools import lru_cache
 from typing import Literal
 

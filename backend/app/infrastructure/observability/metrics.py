@@ -1,5 +1,6 @@
 """Single source of truth for every Prometheus metric. Import these, never
 instantiate a Counter/Histogram anywhere else, or Prometheus will register duplicates."""
+
 from prometheus_client import Counter, Gauge, Histogram
 
 HTTP_REQUESTS_TOTAL = Counter(

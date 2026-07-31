@@ -17,13 +17,15 @@ def make_planner(llm: LLMProvider, tool_registry: ToolRegistry):
 
         if response.tool_calls:
             return {
-                "needs_tool": True, "selected_tool": response.tool_calls[0],
+                "needs_tool": True,
+                "selected_tool": response.tool_calls[0],
                 "prompt_tokens": state.prompt_tokens + response.prompt_tokens,
                 "completion_tokens": state.completion_tokens + response.completion_tokens,
             }
 
         return {
-            "needs_tool": False, "draft_response": response.content,
+            "needs_tool": False,
+            "draft_response": response.content,
             "prompt_tokens": state.prompt_tokens + response.prompt_tokens,
             "completion_tokens": state.completion_tokens + response.completion_tokens,
         }

@@ -1,7 +1,15 @@
+from typing import ClassVar
+
 from app.infrastructure.tools.base import BaseToolPlugin, EnvCredentialProvider
 from app.infrastructure.tools.github_tool import GitHubTool
 from app.infrastructure.tools.mock_tool import MockTool
-from app.infrastructure.tools.stub_tools import JiraTool, NotionTool, SlackTool, StripeTool, TrelloTool
+from app.infrastructure.tools.stub_tools import (
+    JiraTool,
+    NotionTool,
+    SlackTool,
+    StripeTool,
+    TrelloTool,
+)
 from app.infrastructure.tools.weather_tool import WeatherTool
 
 
@@ -9,7 +17,7 @@ class ToolRegistry:
     """Implements domain.providers.interfaces.ToolRegistry. Construction is the ONLY
     place that needs editing to add a new tool to the whole platform."""
 
-    _PLUGIN_CLASSES: list[type[BaseToolPlugin]] = [
+    _PLUGIN_CLASSES: ClassVar[list[type[BaseToolPlugin]]] = [
         GitHubTool,
         WeatherTool,
         MockTool,

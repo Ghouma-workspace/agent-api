@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from app.infrastructure.tools.base import BaseToolPlugin, ToolExecutionContext, ToolResultPayload
 
 
@@ -7,7 +9,7 @@ class MockTool(BaseToolPlugin):
 
     name = "mock_api"
     description = "Echoes back whatever input it receives — used for testing and demos."
-    parameters_schema = {
+    parameters_schema: ClassVar[dict] = {
         "type": "object",
         "properties": {"payload": {"type": "string"}},
         "required": ["payload"],

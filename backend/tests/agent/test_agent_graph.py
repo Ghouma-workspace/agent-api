@@ -6,7 +6,7 @@ import pytest
 from app.application.agent.graph import build_agent_graph
 from app.application.agent.state import AgentState
 from app.core.config import Settings
-from app.domain.entities.chat import ChatMessage, LLMResponse, MessageRole, ToolCall
+from app.domain.entities.chat import ChatMessage, LLMResponse, MessageRole
 from app.infrastructure.tools.base import EnvCredentialProvider
 from app.infrastructure.tools.registry import ToolRegistry
 from tests.conftest import FakeLLMProvider

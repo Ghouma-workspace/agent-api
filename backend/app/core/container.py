@@ -4,6 +4,7 @@ together. Every other module receives its dependencies through constructor injec
 
 Swapping an implementation (Groq -> OpenAI, Postgres -> anything else) means editing
 exactly this file plus writing the new adapter class."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,7 +66,7 @@ class Container:
 
         self.tool_service = ToolService(self.tool_registry)
 
-    def request_scope(self, session: AsyncSession) -> "RequestScope":
+    def request_scope(self, session: AsyncSession) -> RequestScope:
         return RequestScope(self, session)
 
 

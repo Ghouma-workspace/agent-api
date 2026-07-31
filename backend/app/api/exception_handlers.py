@@ -49,6 +49,4 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
-        return _problem_detail(
-            request, 500, "InternalServerError", "An unexpected error occurred."
-        )
+        return _problem_detail(request, 500, "InternalServerError", "An unexpected error occurred.")

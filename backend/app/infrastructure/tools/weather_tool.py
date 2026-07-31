@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from app.infrastructure.tools.base import (
     BaseToolPlugin,
     ResilientHTTPClient,
@@ -12,7 +14,7 @@ class WeatherTool(BaseToolPlugin):
 
     name = "weather"
     description = "Get the current weather for a given latitude/longitude."
-    parameters_schema = {
+    parameters_schema: ClassVar[dict] = {
         "type": "object",
         "properties": {
             "latitude": {"type": "number"},
@@ -43,7 +45,9 @@ class WeatherTool(BaseToolPlugin):
     async def health_check(self) -> bool:
         try:
             response = await self._http.request(
-                "GET", "/v1/forecast", params={"latitude": 0, "longitude": 0, "current_weather": "true"}
+                "GET",
+                "/v1/forecast",
+                params={"latitude": 0, "longitude": 0, "current_weather": "true"},
             )
             return response.status_code == 200
         except Exception:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from collections.abc import AsyncIterator
 
 from groq import AsyncGroq
@@ -30,7 +29,9 @@ class GroqProvider:
 
     def _estimate_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
         rates = _PRICING_PER_1K_TOKENS.get(self._model, {"prompt": 0.0, "completion": 0.0})
-        return (prompt_tokens / 1000) * rates["prompt"] + (completion_tokens / 1000) * rates["completion"]
+        return (prompt_tokens / 1000) * rates["prompt"] + (completion_tokens / 1000) * rates[
+            "completion"
+        ]
 
     @retry(
         retry=retry_if_exception_type(LLMProviderError),
@@ -41,7 +42,6 @@ class GroqProvider:
     async def complete(
         self, messages: list[ChatMessage], tools: list[dict] | None = None, **kwargs: object
     ) -> LLMResponse:
-        start = time.perf_counter()
         try:
             response = await self._client.chat.completions.create(
                 model=self._model,

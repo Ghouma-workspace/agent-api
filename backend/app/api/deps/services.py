@@ -2,6 +2,7 @@
 for things like the tool registry and LLM provider) or the per-request scope
 (request.state.scope, built fresh per request by DBSessionMiddleware, for anything
 DB-backed). Routers never construct services themselves."""
+
 from fastapi import Request
 
 from app.application.services.admin_service import AdminService

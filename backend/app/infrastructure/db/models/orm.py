@@ -19,8 +19,8 @@ class UserORM(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    conversations: Mapped[list["ConversationORM"]] = relationship(back_populates="user")
-    sessions: Mapped[list["SessionORM"]] = relationship(back_populates="user")
+    conversations: Mapped[list[ConversationORM]] = relationship(back_populates="user")
+    sessions: Mapped[list[SessionORM]] = relationship(back_populates="user")
 
 
 class SessionORM(Base):
@@ -32,7 +32,7 @@ class SessionORM(Base):
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    user: Mapped["UserORM"] = relationship(back_populates="sessions")
+    user: Mapped[UserORM] = relationship(back_populates="sessions")
 
 
 class ConversationORM(Base):
@@ -46,9 +46,9 @@ class ConversationORM(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    user: Mapped["UserORM"] = relationship(back_populates="conversations")
-    messages: Mapped[list["MessageORM"]] = relationship(back_populates="conversation")
-    traces: Mapped[list["ExecutionTraceORM"]] = relationship(back_populates="conversation")
+    user: Mapped[UserORM] = relationship(back_populates="conversations")
+    messages: Mapped[list[MessageORM]] = relationship(back_populates="conversation")
+    traces: Mapped[list[ExecutionTraceORM]] = relationship(back_populates="conversation")
 
 
 class MessageORM(Base):
@@ -62,9 +62,9 @@ class MessageORM(Base):
     content: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    conversation: Mapped["ConversationORM"] = relationship(back_populates="messages")
-    tool_executions: Mapped[list["ToolExecutionORM"]] = relationship(back_populates="message")
-    llm_usages: Mapped[list["LLMUsageORM"]] = relationship(back_populates="message")
+    conversation: Mapped[ConversationORM] = relationship(back_populates="messages")
+    tool_executions: Mapped[list[ToolExecutionORM]] = relationship(back_populates="message")
+    llm_usages: Mapped[list[LLMUsageORM]] = relationship(back_populates="message")
 
 
 class ToolExecutionORM(Base):
@@ -80,7 +80,7 @@ class ToolExecutionORM(Base):
     latency_ms: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    message: Mapped["MessageORM"] = relationship(back_populates="tool_executions")
+    message: Mapped[MessageORM] = relationship(back_populates="tool_executions")
 
 
 class LLMUsageORM(Base):
@@ -96,7 +96,7 @@ class LLMUsageORM(Base):
     latency_ms: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    message: Mapped["MessageORM"] = relationship(back_populates="llm_usages")
+    message: Mapped[MessageORM] = relationship(back_populates="llm_usages")
 
 
 class ExecutionTraceORM(Base):
@@ -114,4 +114,4 @@ class ExecutionTraceORM(Base):
     error: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    conversation: Mapped["ConversationORM"] = relationship(back_populates="traces")
+    conversation: Mapped[ConversationORM] = relationship(back_populates="traces")

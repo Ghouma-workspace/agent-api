@@ -3,6 +3,7 @@ span, a structured log line, and — new — a nested Langfuse observation under
 current chat turn's trace. The Langfuse trace object itself is carried via a
 ContextVar (set once per turn in ChatService), mirroring how request_id_var/trace_id_var
 already propagate request context through this same call chain for structlog."""
+
 from __future__ import annotations
 
 import functools

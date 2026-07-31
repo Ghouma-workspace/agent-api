@@ -8,7 +8,9 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
 @router.get("")
-async def list_conversations(request: Request, user_id: UUID = Depends(get_current_user_id)) -> list[dict]:
+async def list_conversations(
+    request: Request, user_id: UUID = Depends(get_current_user_id)
+) -> list[dict]:
     scope = request.state.scope
     conversations = await scope.conversation_repo.list_for_user(user_id)
     return [c.model_dump(mode="json") for c in conversations]

@@ -23,7 +23,9 @@ def _route_after_selector(state: AgentState) -> str:
 
 
 def _route_after_executor(state: AgentState) -> str:
-    return "response_generator" if state.tool_result and state.tool_result.success else "error_handler"
+    return (
+        "response_generator" if state.tool_result and state.tool_result.success else "error_handler"
+    )
 
 
 def _route_after_error_handler(state: AgentState, max_retries: int) -> str:
@@ -49,9 +51,7 @@ def build_agent_graph(llm: LLMProvider, tool_registry: ToolRegistry, settings: S
     graph.add_node("response_generator", make_response_generator(llm))
     graph.add_node("validator", validator)
     graph.add_node("error_handler", error_handler)
-    graph.add_node(
-        "retry_handler", make_retry_handler(settings.agent_max_tool_retries)
-    )
+    graph.add_node("retry_handler", make_retry_handler(settings.agent_max_tool_retries))
 
     graph.set_entry_point("planner")
 

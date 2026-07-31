@@ -1,4 +1,5 @@
 """Ports for external capabilities the domain depends on but never implements."""
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -41,7 +42,7 @@ class ToolPlugin(Protocol):
     description: str
     parameters_schema: dict
 
-    async def execute(self, args: dict, ctx: "ToolExecutionContext") -> "ToolResultPayload": ...
+    async def execute(self, args: dict, ctx: ToolExecutionContext) -> ToolResultPayload: ...
     async def health_check(self) -> bool: ...
 
 
@@ -62,5 +63,5 @@ class ToolRegistry(Protocol):
     """Looks up ToolPlugin instances by name and exposes their schemas for LLM
     function-calling. Infrastructure/tools/registry.py provides the concrete impl."""
 
-    def get(self, name: str) -> "ToolPlugin | None": ...
+    def get(self, name: str) -> ToolPlugin | None: ...
     def list_schemas(self) -> list[dict]: ...

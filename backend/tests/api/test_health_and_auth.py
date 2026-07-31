@@ -1,6 +1,6 @@
 import pytest
-from httpx import ASGITransport, AsyncClient
 from asgi_lifespan import LifespanManager
+from httpx import ASGITransport, AsyncClient
 
 from app.main import create_app
 
@@ -12,13 +12,11 @@ async def test_health_endpoint_returns_ok():
     async with LifespanManager(app):
         transport = ASGITransport(app=app)
 
-        async with AsyncClient(
-            transport=transport,
-            base_url="http://test"
-        ) as client:
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.get("/health")
 
     assert response.status_code == 200
+
 
 @pytest.mark.asyncio
 async def test_chat_requires_authentication():
@@ -27,13 +25,7 @@ async def test_chat_requires_authentication():
     async with LifespanManager(app):
         transport = ASGITransport(app=app)
 
-        async with AsyncClient(
-            transport=transport,
-            base_url="http://test"
-        ) as client:
-            response = await client.post(
-                "/api/chat",
-                json={"content": "hi"}
-            )
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/api/chat", json={"content": "hi"})
 
     assert response.status_code in (401, 403)
