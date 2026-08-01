@@ -42,26 +42,26 @@ resource "aws_security_group" "ec2" {
   }
 
   # Observability UIs — your IP only (Grafana, Jaeger, Langfuse, Prometheus)
-  ingress {
-    from_port   = 3000
-    to_port     = 3001
-    protocol    = "tcp"
-    cidr_blocks = ["${var.your_ip}/32"]
-  }
+  # ingress {
+  #   from_port   = 3000
+  #   to_port     = 3001
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["${var.your_ip}/32"]
+  # }
 
-  ingress {
-    from_port   = 9090
-    to_port     = 9090
-    protocol    = "tcp"
-    cidr_blocks = ["${var.your_ip}/32"]
-  }
+  # ingress {
+  #   from_port   = 9090
+  #   to_port     = 9090
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["${var.your_ip}/32"]
+  # }
 
-  ingress {
-    from_port   = 16686
-    to_port     = 16686
-    protocol    = "tcp"
-    cidr_blocks = ["${var.your_ip}/32"]
-  }
+  # ingress {
+  #   from_port   = 16686
+  #   to_port     = 16686
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["${var.your_ip}/32"]
+  # }
 
   egress {
     from_port   = 0
