@@ -54,7 +54,16 @@ class Settings(BaseSettings):
     langfuse_public_key: SecretStr = Field(default=SecretStr(""))
     langfuse_secret_key: SecretStr = Field(default=SecretStr(""))
     langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_enable_prompt_management: bool = True
     log_level: str = "INFO"
+
+    # --- Tool caching & rate limiting ---
+    tool_cache_ttl_seconds: dict[str, int] = Field(
+        default={"weather": 300, "github": 3600, "mock_api": 60}
+    )
+    tool_rate_limits: dict[str, int] = Field(
+        default={"github": 50, "weather": 50, "slack": 20, "stripe": 30}
+    )
 
     # --- Tool credentials (resolved through CredentialProvider, never read directly by tools) ---
     github_token: SecretStr = Field(default=SecretStr(""))

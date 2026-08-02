@@ -40,15 +40,22 @@ class GroqProvider:
         reraise=True,
     )
     async def complete(
-        self, messages: list[ChatMessage], tools: list[dict] | None = None, **kwargs: object
+        self,
+        messages: list[ChatMessage],
+        tools: list[dict] | None = None,
+        response_format: dict | None = None,
+        **kwargs: object,
     ) -> LLMResponse:
         try:
-            response = await self._client.chat.completions.create(
+            create_kwargs: dict = dict(
                 model=self._model,
                 messages=self._to_groq_messages(messages),
                 tools=tools or None,
                 timeout=self._timeout,
             )
+            if response_format is not None:
+                create_kwargs["response_format"] = response_format
+            response = await self._client.chat.completions.create(**create_kwargs)
         except Exception as exc:  # groq SDK raises various HTTP/transport errors
             raise LLMProviderError("groq", str(exc), retryable=True) from exc
 

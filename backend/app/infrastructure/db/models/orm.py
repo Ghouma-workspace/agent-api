@@ -31,6 +31,9 @@ class SessionORM(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # V2: device binding and IP tracking
+    device_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    last_seen_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     user: Mapped[UserORM] = relationship(back_populates="sessions")
 
@@ -45,6 +48,8 @@ class ConversationORM(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+    # V2: tracks up to which message the conversation has been summarized
+    summarized_up_to: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     user: Mapped[UserORM] = relationship(back_populates="conversations")
     messages: Mapped[list[MessageORM]] = relationship(back_populates="conversation")

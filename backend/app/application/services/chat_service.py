@@ -77,17 +77,6 @@ class ChatService:
         final_state_dict = await self._graph.ainvoke(initial_state)
         duration_ms = (time.perf_counter() - start) * 1000
 
-        # self._langfuse.generation(
-        #     lf_trace,
-        #     name="agent_turn",
-        #     model="groq",
-        #     input={"messages": [m.content for m in history]},
-        #     output={"response": final_state_dict.get("draft_response", "")},
-        #     usage={
-        #         "input": final_state_dict.get("prompt_tokens", 0),
-        #         "output": final_state_dict.get("completion_tokens", 0),
-        #     },
-        # )
         self._langfuse.flush()
 
         assistant_message = ChatMessage(
@@ -99,6 +88,15 @@ class ChatService:
         )
         await self._messages.add(assistant_message)
         await self._conversations.touch(conversation_id)
+
+        # Dispatch background summarization every 20 messages to keep token budgets sane.
+        # Fire-and-forget: Celery failure must not affect the chat response.
+        try:
+            if len(history) > 0 and len(history) % 20 == 0:
+                from app.infrastructure.tasks.summarization import summarize_conversation
+                summarize_conversation.delay(str(conversation_id))
+        except Exception:  # noqa: BLE001
+            pass  # Celery unavailable in dev — this is graceful degradation
 
         return {
             "message": assistant_message,

@@ -3,7 +3,15 @@ a domain interface and its concrete infrastructure implementation and wire them
 together. Every other module receives its dependencies through constructor injection.
 
 Swapping an implementation (Groq -> OpenAI, Postgres -> anything else) means editing
-exactly this file plus writing the new adapter class."""
+exactly this file plus writing the new adapter class.
+
+V2 additions wired here:
+  - PromptService       (Section 2)
+  - ToolResultCache     (Section 4)
+  - ToolRateLimiter     (Section 5)
+  - CircuitBreaker      (Section 6)
+  All new services are constructed here and injected into build_agent_graph.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +21,7 @@ from app.application.agent.graph import build_agent_graph
 from app.application.services.admin_service import AdminService
 from app.application.services.auth_service import AuthService
 from app.application.services.chat_service import ChatService
+from app.application.services.prompt_service import PromptService
 from app.application.services.tool_service import ToolService
 from app.core.config import Settings
 from app.infrastructure.cache.redis_client import (
@@ -20,6 +29,8 @@ from app.infrastructure.cache.redis_client import (
     RedisRateLimiter,
     create_redis_client,
 )
+from app.infrastructure.cache.tool_cache import ToolResultCache
+from app.infrastructure.cache.tool_rate_limiter import ToolRateLimiter
 from app.infrastructure.db.repositories.chat_repository import (
     SqlAlchemyConversationRepository,
     SqlAlchemyLLMUsageRepository,
@@ -35,13 +46,13 @@ from app.infrastructure.llm.groq_provider import GroqProvider
 from app.infrastructure.observability.langfuse_client import LangfuseTracker, create_langfuse_client
 from app.infrastructure.security.jwt import JWTService, PasswordHasher
 from app.infrastructure.tools.base import EnvCredentialProvider
+from app.infrastructure.tools.circuit_breaker import CircuitBreaker
 from app.infrastructure.tools.registry import ToolRegistry
 
 
 class Container:
-    """Request-scoped services (repositories) are constructed per-request via
-    `for_request(session)`; singletons (LLM provider, tool registry, JWT service,
-    Redis, the compiled agent graph) live for the lifetime of the app."""
+    """Singletons live for the lifetime of the app. Request-scoped services are in
+    RequestScope, constructed fresh per request via a middleware/dependency."""
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
@@ -59,14 +70,45 @@ class Container:
         self.credential_provider = EnvCredentialProvider(settings)
         self.tool_registry = ToolRegistry(self.credential_provider)
 
-        self.llm_provider = GroqProvider(settings)  # swap here for OpenAIProvider/AnthropicProvider
-        self.langfuse = LangfuseTracker(create_langfuse_client(settings))
+        self.llm_provider = GroqProvider(settings)
 
-        self.agent_graph = build_agent_graph(self.llm_provider, self.tool_registry, settings)
+        _langfuse_client = create_langfuse_client(settings)
+        self.langfuse = LangfuseTracker(_langfuse_client)
+
+        # --- V2: Prompt versioning (Section 2) ---
+        self.prompt_service = PromptService(
+            _langfuse_client,
+            enable=settings.langfuse_enable_prompt_management,
+        )
+
+        # --- V2: Tool result cache (Section 4) ---
+        self.tool_cache = ToolResultCache(self.redis)
+
+        # --- V2: Per-tool rate limiter (Section 5) ---
+        self.tool_rate_limiter = ToolRateLimiter(self.redis, settings.tool_rate_limits)
+
+        # --- V2: Circuit breaker (Section 6) —shared instance, one state machine per tool ---
+        self.circuit_breaker = CircuitBreaker(
+            self.redis,
+            failure_threshold=5,
+            recovery_timeout=60,
+            success_threshold=2,
+        )
+
+        # Build the compiled agent graph with all V2 infrastructure injected
+        self.agent_graph = build_agent_graph(
+            self.llm_provider,
+            self.tool_registry,
+            self.prompt_service,
+            settings,
+            tool_cache=self.tool_cache,
+            tool_rate_limiter=self.tool_rate_limiter,
+            circuit_breaker=self.circuit_breaker,
+        )
 
         self.tool_service = ToolService(self.tool_registry)
 
-    def request_scope(self, session: AsyncSession) -> RequestScope:
+    def request_scope(self, session: AsyncSession) -> "RequestScope":
         return RequestScope(self, session)
 
 

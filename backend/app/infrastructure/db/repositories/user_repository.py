@@ -48,8 +48,12 @@ class SqlAlchemySessionRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self, user_id: UUID, jti: str, expires_at: datetime) -> None:
-        self._session.add(SessionORM(jti=jti, user_id=user_id, expires_at=expires_at))
+    async def create(
+        self, user_id: UUID, jti: str, expires_at: datetime, device_id: str | None = None
+    ) -> None:
+        self._session.add(
+            SessionORM(jti=jti, user_id=user_id, expires_at=expires_at, device_id=device_id)
+        )
         await self._session.flush()
 
     async def is_active(self, jti: str) -> bool:
@@ -57,6 +61,16 @@ class SqlAlchemySessionRepository:
         if row is None:
             return False
         return not row.revoked and row.expires_at > datetime.now(row.expires_at.tzinfo)
+
+    async def get_device_id(self, jti: str) -> str | None:
+        row = await self._session.get(SessionORM, jti)
+        return row.device_id if row else None
+
+    async def update_last_seen_ip(self, jti: str, ip: str) -> None:
+        row = await self._session.get(SessionORM, jti)
+        if row is not None:
+            row.last_seen_ip = ip
+            await self._session.flush()
 
     async def revoke(self, jti: str) -> None:
         row = await self._session.get(SessionORM, jti)

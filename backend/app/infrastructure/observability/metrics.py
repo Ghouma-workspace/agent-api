@@ -39,3 +39,16 @@ RETRIES_TOTAL = Counter("retries_total", "Total retry attempts", ["component"])
 FAILURES_TOTAL = Counter("failures_total", "Total unrecoverable failures", ["component"])
 
 ACTIVE_USERS = Gauge("active_users", "Users with activity in the last 5 minutes")
+
+# Circuit breaker state per tool: 0=CLOSED, 1=HALF_OPEN, 2=OPEN
+CIRCUIT_BREAKER_STATE = Gauge(
+    "circuit_breaker_state",
+    "Circuit breaker state per tool (0=CLOSED, 1=HALF_OPEN, 2=OPEN)",
+    ["tool_name"],
+)
+
+# Content filter
+CONTENT_FILTER_TRIGGERS_TOTAL = Counter(
+    "content_filter_triggers_total",
+    "Total content filter trigger events",
+)

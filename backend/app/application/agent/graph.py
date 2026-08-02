@@ -1,5 +1,6 @@
 from langgraph.graph import END, StateGraph
 
+from app.application.agent.nodes.content_filter import content_filter
 from app.application.agent.nodes.error_handler import error_handler
 from app.application.agent.nodes.planner import make_planner
 from app.application.agent.nodes.response_generator import make_response_generator
@@ -8,8 +9,15 @@ from app.application.agent.nodes.tool_executor import make_tool_executor
 from app.application.agent.nodes.tool_selector import make_tool_selector
 from app.application.agent.nodes.validator import validator
 from app.application.agent.state import AgentState
+from app.application.services.prompt_service import PromptService
 from app.core.config import Settings
 from app.domain.providers.interfaces import LLMProvider, ToolRegistry
+
+
+def _route_after_content_filter(state: AgentState) -> str:
+    if state.error == "content_filter_triggered":
+        return END
+    return "planner"
 
 
 def _route_after_planner(state: AgentState) -> str:
@@ -40,21 +48,44 @@ def _route_after_validator(state: AgentState, max_loops: int) -> str:
     return END
 
 
-def build_agent_graph(llm: LLMProvider, tool_registry: ToolRegistry, settings: Settings):
-    """Wires the full graph described in ARCHITECTURE.md section 5. Returns a compiled
-    LangGraph runnable that ChatService.invoke()s per conversation turn."""
+def build_agent_graph(
+    llm: LLMProvider,
+    tool_registry: ToolRegistry,
+    prompt_service: PromptService,
+    settings: Settings,
+    tool_cache=None,
+    tool_rate_limiter=None,
+    circuit_breaker=None,
+):
+    """Wires the full graph. Content filter is the entry point; planner follows."""
     graph = StateGraph(AgentState)
 
-    graph.add_node("planner", make_planner(llm, tool_registry))
-    graph.add_node("tool_selector", make_tool_selector(llm, tool_registry))
-    graph.add_node("tool_executor", make_tool_executor(tool_registry))
-    graph.add_node("response_generator", make_response_generator(llm))
+    graph.add_node("content_filter", content_filter)
+    graph.add_node("planner", make_planner(llm, tool_registry, prompt_service))
+    graph.add_node("tool_selector", make_tool_selector(llm, tool_registry, prompt_service))
+    graph.add_node(
+        "tool_executor",
+        make_tool_executor(
+            tool_registry,
+            tool_cache=tool_cache,
+            tool_rate_limiter=tool_rate_limiter,
+            circuit_breaker=circuit_breaker,
+            tool_cache_ttls=settings.tool_cache_ttl_seconds,
+        ),
+    )
+    graph.add_node("response_generator", make_response_generator(llm, prompt_service))
     graph.add_node("validator", validator)
     graph.add_node("error_handler", error_handler)
     graph.add_node("retry_handler", make_retry_handler(settings.agent_max_tool_retries))
 
-    graph.set_entry_point("planner")
+    # Content filter is the entry point
+    graph.set_entry_point("content_filter")
 
+    graph.add_conditional_edges(
+        "content_filter",
+        _route_after_content_filter,
+        {"planner": "planner", END: END},
+    )
     graph.add_conditional_edges(
         "planner",
         _route_after_planner,

@@ -7,6 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 from app.core.config import Settings
+from app.infrastructure.observability.redaction import redacting_processor
 
 request_id_var: ContextVar[str] = ContextVar("request_id", default="")
 trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
@@ -33,6 +34,7 @@ def setup_logging(settings: Settings) -> None:
             structlog.processors.add_log_level,
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
+            redacting_processor,       # <-- V2: redact secrets before JSON rendering
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(

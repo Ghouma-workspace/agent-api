@@ -1,3 +1,8 @@
+"""JWT service with V2 hardening:
+  - aud claim on every token (audience = "ai-api-assistant")
+  - Audience validated on decode — tokens with wrong aud are rejected
+"""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -10,6 +15,8 @@ from pydantic import BaseModel
 from app.core.config import Settings
 from app.domain.exceptions.base import AuthenticationError
 
+_AUDIENCE = "ai-api-assistant"
+
 
 class TokenType(StrEnum):
     ACCESS = "access"
@@ -21,11 +28,16 @@ class TokenPayload(BaseModel):
     type: TokenType
     exp: datetime
     jti: str
+    aud: str = _AUDIENCE
 
 
 class JWTService:
-    """Encodes/decodes access and refresh tokens. Refresh tokens are additionally
-    tracked in the `sessions` table so they can be revoked server-side."""
+    """Encodes/decodes access and refresh tokens.
+
+    V2 additions:
+      - aud claim = "ai-api-assistant" on all tokens
+      - decode() validates audience and rejects mismatches
+    """
 
     def __init__(self, settings: Settings) -> None:
         self._secret = settings.jwt_secret_key.get_secret_value()
@@ -41,6 +53,7 @@ class JWTService:
             "iat": now,
             "exp": now + ttl,
             "jti": jti,
+            "aud": _AUDIENCE,
         }
         return jwt.encode(payload, self._secret, algorithm=self._algorithm)
 
@@ -52,7 +65,14 @@ class JWTService:
 
     def decode(self, token: str) -> TokenPayload:
         try:
-            raw = jwt.decode(token, self._secret, algorithms=[self._algorithm])
+            raw = jwt.decode(
+                token,
+                self._secret,
+                algorithms=[self._algorithm],
+                audience=_AUDIENCE,
+            )
+            if raw.get("aud") != _AUDIENCE:
+                raise AuthenticationError("Invalid token audience")
             return TokenPayload(**raw)
         except JWTError as exc:
             raise AuthenticationError("Invalid or expired token") from exc

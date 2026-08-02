@@ -1,0 +1,146 @@
+{
+  "title": "AI API Assistant — Agent Health",
+  "schemaVersion": 39,
+  "uid": "agent-health-v2",
+  "tags": ["v2", "agent", "health"],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Agent node p95 latency per node",
+      "type": "barchart",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(agent_node_duration_seconds_bucket[5m])) by (le, node))",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      },
+      "options": {
+        "barWidth": 0.7,
+        "groupWidth": 0.7,
+        "xField": "node"
+      }
+    },
+    {
+      "id": 2,
+      "title": "Retry rate over time",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(retries_total[5m])) by (component)",
+          "legendFormat": "{{component}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 3,
+      "title": "Validation loop count distribution",
+      "type": "timeseries",
+      "description": "Times the validator sent the agent back to re-select a tool",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(agent_node_duration_seconds_count{node=\"validator\"}[5m]))",
+          "legendFormat": "Validator invocations/s"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 4,
+      "title": "Error rate by node",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(failures_total[5m])) by (component)",
+          "legendFormat": "{{component}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.1 },
+              { "color": "red", "value": 1.0 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Content filter trigger rate",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(content_filter_triggers_total[5m]))",
+          "legendFormat": "Triggers/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.5 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Active users",
+      "type": "gauge",
+      "gridPos": { "x": 12, "y": 16, "w": 6, "h": 8 },
+      "targets": [
+        {
+          "expr": "active_users",
+          "legendFormat": "Active users"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 50 },
+              { "color": "red", "value": 200 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Planner decision: tool vs direct",
+      "type": "piechart",
+      "gridPos": { "x": 18, "y": 16, "w": 6, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(agent_node_duration_seconds_count{node=\"tool_executor\"}[1h]))",
+          "legendFormat": "Tool calls"
+        },
+        {
+          "expr": "sum(increase(agent_node_duration_seconds_count{node=\"response_generator\"}[1h])) - sum(increase(agent_node_duration_seconds_count{node=\"tool_executor\"}[1h]))",
+          "legendFormat": "Direct answers"
+        }
+      ]
+    }
+  ]
+}

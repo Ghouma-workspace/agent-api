@@ -11,7 +11,7 @@ class FakeLLMProvider:
         self._responses = responses or [LLMResponse(content="DIRECT")]
         self._calls = 0
 
-    async def complete(self, messages, tools=None, **kwargs):
+    async def complete(self, messages, tools=None, response_format=None, **kwargs):
         response = self._responses[min(self._calls, len(self._responses) - 1)]
         self._calls += 1
         return response
