@@ -21,8 +21,12 @@ def _route_after_content_filter(state: AgentState) -> str:
 
 
 def _route_after_planner(state: AgentState) -> str:
-    if state.needs_tool and state.selected_tool is not None:
-        return "tool_executor"
+    if state.needs_tool:
+        # Always go through tool_selector when a tool is needed.
+        # The planner decides *whether* and *which* tool is needed;
+        # tool_selector uses function-calling to extract the actual arguments
+        # from the user message. Bypassing it leaves arguments={}.
+        return "tool_selector"
     return "response_generator"
 
 
@@ -57,7 +61,16 @@ def build_agent_graph(
     tool_rate_limiter=None,
     circuit_breaker=None,
 ):
-    """Wires the full graph. Content filter is the entry point; planner follows."""
+    """Wires the full graph. Content filter is the entry point; planner follows.
+
+    Flow for tool requests:
+      content_filter → planner → tool_selector → tool_executor → response_generator → validator
+
+    The split between planner and tool_selector is intentional:
+      - planner uses JSON mode to make a binary decision (needs_tool + which tool)
+      - tool_selector uses function-calling to extract typed arguments from the message
+    Two separate LLM calls with different modes — JSON mode can't do function-calling.
+    """
     graph = StateGraph(AgentState)
 
     graph.add_node("content_filter", content_filter)
@@ -78,7 +91,6 @@ def build_agent_graph(
     graph.add_node("error_handler", error_handler)
     graph.add_node("retry_handler", make_retry_handler(settings.agent_max_tool_retries))
 
-    # Content filter is the entry point
     graph.set_entry_point("content_filter")
 
     graph.add_conditional_edges(
@@ -89,7 +101,7 @@ def build_agent_graph(
     graph.add_conditional_edges(
         "planner",
         _route_after_planner,
-        {"tool_executor": "tool_executor", "response_generator": "response_generator"},
+        {"tool_selector": "tool_selector", "response_generator": "response_generator"},
     )
     graph.add_conditional_edges(
         "tool_selector",
