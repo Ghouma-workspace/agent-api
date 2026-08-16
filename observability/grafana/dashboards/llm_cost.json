@@ -1,22 +1,21 @@
 {
   "title": "AI API Assistant — LLM Cost",
   "schemaVersion": 39,
-  "uid": "llm-cost-v2",
   "tags": ["v2", "cost", "llm"],
   "time": { "from": "now-24h", "to": "now" },
   "refresh": "1m",
   "panels": [
     {
       "id": 1,
-      "title": "Cumulative LLM cost (USD) by model",
+      "title": "Cumulative LLM cost by model (USD)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(llm_cost_usd_total) by (model)",
-          "legendFormat": "{{model}}"
-        }
-      ],
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(llm_cost_usd_total) by (model)",
+        "legendFormat": "{{model}}"
+      }],
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
@@ -26,97 +25,91 @@
     },
     {
       "id": 2,
-      "title": "Prompt vs completion token ratio over time",
+      "title": "Prompt tokens/s by model",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "sum(rate(llm_prompt_tokens_total[5m])) by (model)",
           "legendFormat": "prompt {{model}}"
         },
         {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
           "expr": "sum(rate(llm_completion_tokens_total[5m])) by (model)",
           "legendFormat": "completion {{model}}"
         }
       ],
-      "fieldConfig": {
-        "defaults": { "unit": "tokens/s" }
-      }
+      "fieldConfig": { "defaults": { "unit": "short" } }
     },
     {
       "id": 3,
-      "title": "LLM cost per hour (USD)",
-      "type": "barchart",
+      "title": "Cost per hour (USD)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(increase(llm_cost_usd_total[1h])) by (model)",
-          "legendFormat": "{{model}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "currencyUSD" }
-      },
-      "options": {
-        "barWidth": 0.7,
-        "groupWidth": 0.7,
-        "stacking": "normal"
-      }
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(increase(llm_cost_usd_total[1h])) by (model)",
+        "legendFormat": "{{model}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
     },
     {
       "id": 4,
-      "title": "Estimated tokens saved by tool cache",
-      "description": "prompt_tokens * cache_hits_total — approximation of avoided LLM calls",
-      "type": "timeseries",
-      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "expr": "sum(rate(cache_hits_total{cache_name=\"tool_result\"}[5m])) * 500",
-          "legendFormat": "Estimated tokens saved (500 avg prompt tokens/hit)"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": { "unit": "tokens/s" }
-      }
+      "title": "Total tokens consumed",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 16, "w": 8, "h": 4 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(llm_prompt_tokens_total) + sum(llm_completion_tokens_total)",
+        "legendFormat": "Total tokens"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "short", "noValue": "0" } }
     },
     {
       "id": 5,
-      "title": "Total tokens consumed (prompt + completion)",
+      "title": "Total spend — all time (USD)",
       "type": "stat",
-      "gridPos": { "x": 12, "y": 16, "w": 6, "h": 4 },
-      "targets": [
-        {
-          "expr": "sum(llm_prompt_tokens_total) + sum(llm_completion_tokens_total)",
-          "legendFormat": "Total tokens"
-        }
-      ],
-      "fieldConfig": { "defaults": { "unit": "short" } },
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } }
-    },
-    {
-      "id": 6,
-      "title": "Total LLM spend (USD, all time)",
-      "type": "stat",
-      "gridPos": { "x": 18, "y": 16, "w": 6, "h": 4 },
-      "targets": [
-        {
-          "expr": "sum(llm_cost_usd_total)",
-          "legendFormat": "Total USD"
-        }
-      ],
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 8, "y": 16, "w": 8, "h": 4 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(llm_cost_usd_total)",
+        "legendFormat": "Total USD"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
+          "noValue": "$0.00",
           "thresholds": {
+            "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 10 },
-              { "color": "red", "value": 100 }
+              { "color": "green",  "value": null },
+              { "color": "yellow", "value": 10   },
+              { "color": "red",    "value": 100  }
             ]
           }
         }
-      },
-      "options": { "colorMode": "background", "reduceOptions": { "calcs": ["lastNotNull"] } }
+      }
+    },
+    {
+      "id": 6,
+      "title": "LLM requests/s",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 16, "y": 16, "w": 8, "h": 4 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(rate(llm_request_duration_seconds_count[5m]))",
+        "legendFormat": "req/s"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "fieldConfig": { "defaults": { "unit": "reqps", "noValue": "0" } }
     }
   ]
 }

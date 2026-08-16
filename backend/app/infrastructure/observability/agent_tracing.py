@@ -1,9 +1,3 @@
-"""`@traced_node` wraps every LangGraph node with three observability signals: an OTel
-span, a structured log line, and — new — a nested Langfuse observation under the
-current chat turn's trace. The Langfuse trace object itself is carried via a
-ContextVar (set once per turn in ChatService), mirroring how request_id_var/trace_id_var
-already propagate request context through this same call chain for structlog."""
-
 from __future__ import annotations
 
 import functools
@@ -16,7 +10,7 @@ import structlog
 from opentelemetry import trace
 
 from app.application.agent.state import AgentState
-from app.infrastructure.observability.metrics import AGENT_NODE_DURATION_SECONDS
+from app.infrastructure.observability.metrics import AGENT_NODE_DURATION_SECONDS, FAILURES_TOTAL
 
 logger = structlog.get_logger()
 tracer = trace.get_tracer("ai-api-assistant.agent")
@@ -28,13 +22,10 @@ _langfuse_trace_var: ContextVar[Any | None] = ContextVar("langfuse_trace", defau
 
 
 def set_current_langfuse_trace(trace_obj: Any | None) -> None:
-    """Called once per chat turn in ChatService, before the graph runs."""
     _langfuse_trace_var.set(trace_obj)
 
 
 def _safe_serialize(value: Any) -> Any:
-    """Converts pydantic models (ChatMessage, ToolCall, ToolResult, ...) in node
-    inputs/outputs into plain dicts so Langfuse can JSON-encode them."""
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
     if isinstance(value, list):
@@ -45,8 +36,6 @@ def _safe_serialize(value: Any) -> Any:
 
 
 def _node_input_snapshot(state: AgentState) -> dict:
-    """What the node saw when it started — deliberately compact (last message + the
-    decision-relevant state) rather than the full message history on every node."""
     return {
         "last_message": state.messages[-1].content if state.messages else None,
         "needs_tool": state.needs_tool,
@@ -58,10 +47,6 @@ def _node_input_snapshot(state: AgentState) -> dict:
 
 
 def traced_node(node_name: str, *, calls_llm: bool = False) -> Callable[[NodeFn], NodeFn]:
-    """`calls_llm=True` opens a Langfuse *generation* (shows up alongside token/cost
-    data); `calls_llm=False` opens a plain *span* (control-flow/tool-execution nodes
-    that don't themselves call the LLM)."""
-
     def decorator(fn: NodeFn) -> NodeFn:
         @functools.wraps(fn)
         async def wrapper(state: T) -> dict:
@@ -96,13 +81,18 @@ def traced_node(node_name: str, *, calls_llm: bool = False) -> Callable[[NodeFn]
                     result.setdefault("node_path", [*state.node_path, node_name])
 
                     if lf_observation is not None:
-                        lf_observation.end(output=_safe_serialize(result))
+                        lf_output = _safe_serialize(result)
+                        if "reasoning" in result:
+                            lf_output["_reasoning"] = result["reasoning"]
+                        lf_observation.end(output=lf_output)
 
                     return result
+
                 except Exception as exc:
                     duration = time.perf_counter() - start
                     span.record_exception(exc)
                     AGENT_NODE_DURATION_SECONDS.labels(node=node_name).observe(duration)
+                    FAILURES_TOTAL.labels(component=node_name).inc()   # ← was missing
                     log.error("agent_node_error", error=str(exc), latency_ms=duration * 1000)
 
                     if lf_observation is not None:

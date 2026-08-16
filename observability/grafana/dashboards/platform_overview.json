@@ -1,45 +1,93 @@
 {
   "title": "AI API Assistant — Platform Overview",
+  "uid": "platform-overview",
   "schemaVersion": 39,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
   "panels": [
     {
+      "id": 1,
       "title": "Requests per minute",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
-      "targets": [{ "expr": "sum(rate(http_requests_total[1m])) * 60" }]
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(rate(http_requests_total[1m])) by (handler) * 60",
+        "legendFormat": "{{handler}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "reqpm" } }
     },
     {
-      "title": "HTTP p95 latency",
+      "id": 2,
+      "title": "HTTP p95 latency (ms)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))" }]
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_highr_seconds_bucket[5m])) by (le)) * 1000",
+        "legendFormat": "p95 ms"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
     },
     {
-      "title": "Agent node latency (p95)",
+      "id": 3,
+      "title": "Agent node p95 latency (ms)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
-      "targets": [{ "expr": "histogram_quantile(0.95, sum(rate(agent_node_duration_seconds_bucket[5m])) by (le, node))" }]
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "histogram_quantile(0.95, sum(rate(agent_node_duration_seconds_bucket[5m])) by (le, node)) * 1000",
+        "legendFormat": "{{node}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
     },
     {
-      "title": "Tool usage frequency",
+      "id": 4,
+      "title": "Tool usage (last 1h)",
       "type": "piechart",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
-      "targets": [{ "expr": "sum(increase(tool_executions_total[1h])) by (tool_name)" }]
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(increase(tool_executions_total[1h])) by (tool_name)",
+        "legendFormat": "{{tool_name}}"
+      }]
     },
     {
-      "title": "LLM cost (USD, cumulative)",
+      "id": 5,
+      "title": "LLM cost — cumulative (USD)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
-      "targets": [{ "expr": "sum(llm_cost_usd_total)" }]
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(llm_cost_usd_total) by (model)",
+        "legendFormat": "{{model}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" } }
     },
     {
-      "title": "Failures & retries",
+      "id": 6,
+      "title": "LLM tokens/s",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
       "targets": [
-        { "expr": "sum(rate(failures_total[5m]))", "legendFormat": "failures" },
-        { "expr": "sum(rate(retries_total[5m]))", "legendFormat": "retries" }
-      ]
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(llm_prompt_tokens_total[5m])) by (model)",
+          "legendFormat": "prompt {{model}}"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(llm_completion_tokens_total[5m])) by (model)",
+          "legendFormat": "completion {{model}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
     }
   ]
 }

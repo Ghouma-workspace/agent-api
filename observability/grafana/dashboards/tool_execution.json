@@ -1,0 +1,176 @@
+{
+  "title": "AI API Assistant — Tool Execution",
+  "schemaVersion": 39,
+  "tags": ["v2", "tools"],
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "title": "Tool executions per minute",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(rate(tool_executions_total[1m])) by (tool_name) * 60",
+        "legendFormat": "{{tool_name}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "reqpm" } }
+    },
+    {
+      "id": 2,
+      "title": "Tool latency p50 / p95 / p99 (ms)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.50, sum(rate(tool_execution_duration_seconds_bucket[5m])) by (le, tool_name)) * 1000",
+          "legendFormat": "p50 {{tool_name}}"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.95, sum(rate(tool_execution_duration_seconds_bucket[5m])) by (le, tool_name)) * 1000",
+          "legendFormat": "p95 {{tool_name}}"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "histogram_quantile(0.99, sum(rate(tool_execution_duration_seconds_bucket[5m])) by (le, tool_name)) * 1000",
+          "legendFormat": "p99 {{tool_name}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ms" } }
+    },
+    {
+      "id": 3,
+      "title": "Tool error rate",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(rate(tool_executions_total{success=\"False\"}[5m])) by (tool_name) / sum(rate(tool_executions_total[5m])) by (tool_name)",
+        "legendFormat": "{{tool_name}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.2 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Circuit breaker — github",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "circuit_breaker_state{tool_name=\"github\"}",
+        "legendFormat": "github"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [{
+            "type": "value",
+            "options": {
+              "0": { "text": "CLOSED",    "color": "green"  },
+              "1": { "text": "HALF_OPEN", "color": "yellow" },
+              "2": { "text": "OPEN",      "color": "red"    }
+            }
+          }],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "noValue": "CLOSED"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Circuit breaker — weather",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "circuit_breaker_state{tool_name=\"weather\"}",
+        "legendFormat": "weather"
+      }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [{
+            "type": "value",
+            "options": {
+              "0": { "text": "CLOSED",    "color": "green"  },
+              "1": { "text": "HALF_OPEN", "color": "yellow" },
+              "2": { "text": "OPEN",      "color": "red"    }
+            }
+          }],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "noValue": "CLOSED"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Cache hit rate (tool results)",
+      "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [{
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "sum(rate(cache_hits_total{cache_name=\"tool_result\"}[5m])) / (sum(rate(cache_hits_total{cache_name=\"tool_result\"}[5m])) + sum(rate(cache_misses_total{cache_name=\"tool_result\"}[5m])))",
+        "legendFormat": "Hit rate"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "noValue": "0",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red",    "value": null },
+              { "color": "yellow", "value": 0.5  },
+              { "color": "green",  "value": 0.8  }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Cache hits vs misses",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(cache_hits_total{cache_name=\"tool_result\"}[5m]))",
+          "legendFormat": "hits/s"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum(rate(cache_misses_total{cache_name=\"tool_result\"}[5m]))",
+          "legendFormat": "misses/s"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    }
+  ]
+}

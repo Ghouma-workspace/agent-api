@@ -14,15 +14,29 @@ from app.domain.repositories.interfaces import (
 )
 from app.infrastructure.observability.agent_tracing import set_current_langfuse_trace
 from app.infrastructure.observability.langfuse_client import LangfuseTracker
+from app.infrastructure.observability.metrics import ACTIVE_USERS
 
 tracer = trace.get_tracer("ai-api-assistant.chat")
 
+# Track unique users active in the last 5 minutes using a simple in-process set.
+# For multi-process deployments this would move to Redis — sufficient for local dev.
+import time as _time
+_active_users: dict[str, float] = {}   # user_id -> last_seen timestamp
+_ACTIVE_WINDOW = 300                    # 5 minutes
+
+
+def _record_active_user(user_id: str) -> None:
+    now = _time.time()
+    _active_users[user_id] = now
+    # Evict stale entries
+    cutoff = now - _ACTIVE_WINDOW
+    stale = [uid for uid, ts in _active_users.items() if ts < cutoff]
+    for uid in stale:
+        del _active_users[uid]
+    ACTIVE_USERS.set(len(_active_users))
+
 
 class ChatService:
-    """The single use-case entry point for 'a user sent a message'. Persists the user
-    turn, runs the compiled LangGraph agent, persists the assistant turn + trace, and
-    returns everything the frontend needs to render cost/latency/trace-id."""
-
     def __init__(
         self,
         agent_graph,
@@ -47,6 +61,9 @@ class ChatService:
     async def send_message(self, user_id: UUID, conversation_id: UUID, content: str) -> dict:
         span_ctx = trace.get_current_span().get_span_context()
         trace_id = format(span_ctx.trace_id, "032x") if span_ctx.trace_id else str(uuid.uuid4())
+
+        # Track this user as active
+        _record_active_user(str(user_id))
 
         user_message = ChatMessage(
             id=uuid.uuid4(),
@@ -89,14 +106,12 @@ class ChatService:
         await self._messages.add(assistant_message)
         await self._conversations.touch(conversation_id)
 
-        # Dispatch background summarization every 20 messages to keep token budgets sane.
-        # Fire-and-forget: Celery failure must not affect the chat response.
         try:
             if len(history) > 0 and len(history) % 20 == 0:
                 from app.infrastructure.tasks.summarization import summarize_conversation
                 summarize_conversation.delay(str(conversation_id))
         except Exception:  # noqa: BLE001
-            pass  # Celery unavailable in dev — this is graceful degradation
+            pass
 
         return {
             "message": assistant_message,

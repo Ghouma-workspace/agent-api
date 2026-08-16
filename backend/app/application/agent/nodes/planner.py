@@ -1,15 +1,4 @@
-"""Planner node: decides WHETHER a tool is needed and WHICH one.
-
-Uses Groq's JSON mode + Pydantic validation so the decision is always structured
-and inspectable. The `reasoning` field is the primary debugging signal.
-
-IMPORTANT: The planner does NOT extract tool arguments. It sets selected_tool with
-empty arguments as a hint for tool_selector, which uses function-calling in a
-separate LLM pass to extract the actual typed arguments from the user message.
-
-  planner  →  tool_selector  →  tool_executor
-  (JSON mode, decides what)   (func-calling, extracts how)
-"""
+"""Planner node: decides WHETHER a tool is needed and WHICH one."""
 
 from __future__ import annotations
 
@@ -29,24 +18,65 @@ from app.infrastructure.observability.agent_tracing import traced_node
 
 logger = structlog.get_logger()
 
-PLANNER_SYSTEM_PROMPT = (
-    "You are a planning assistant. Decide whether answering the user's message "
-    "requires calling an external tool, or whether you can answer directly.\n\n"
-    "Respond ONLY with a valid JSON object with exactly these fields:\n"
-    '{{"needs_tool": true|false, "tool_name": "exact-tool-name-or-null", "reasoning": "one sentence"}}\n\n'
-    "Available tools: {tool_names}\n\n"
-    "Rules:\n"
-    "- needs_tool=true for: real-time data, live APIs, GitHub operations, weather, side-effects.\n"
-    "- needs_tool=false for: general knowledge, math, creative tasks, explanations.\n"
-    "- tool_name must be exactly one of the available tool names when needs_tool=true, otherwise null.\n"
-    "- Do NOT attempt to extract arguments — just name the tool."
-)
+PLANNER_SYSTEM_PROMPT = """You are a routing assistant. You MUST respond with ONLY a JSON object — no explanation, no markdown, no text before or after.
+
+The JSON object MUST have exactly these three fields:
+- "needs_tool": boolean (true or false)
+- "tool_name": string or null
+- "reasoning": string (one sentence)
+
+Available tools: {tool_names}
+
+Rules:
+- needs_tool=true for: weather, GitHub operations, real-time data, external APIs
+- needs_tool=false for: general knowledge, math, explanations, creative tasks
+- tool_name must be exactly one of the available tool names when needs_tool is true, otherwise null
+
+EXAMPLE RESPONSE (tool needed):
+{{"needs_tool": true, "tool_name": "weather", "reasoning": "User wants real-time weather data."}}
+
+EXAMPLE RESPONSE (no tool needed):
+{{"needs_tool": false, "tool_name": null, "reasoning": "This is a general knowledge question."}}
+
+RESPOND WITH ONLY THE JSON OBJECT. NOTHING ELSE."""
 
 
 class PlannerOutput(BaseModel):
     needs_tool: bool
     tool_name: str | None = None
     reasoning: str
+
+
+def _try_parse_llm_json(raw: str) -> dict | None:
+    """Try to extract a JSON object from the LLM response even if it added extra text."""
+    raw = raw.strip()
+
+    # Direct parse
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+
+    # Strip markdown code fences if present
+    if "```" in raw:
+        import re
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", raw, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError:
+                pass
+
+    # Find first { ... } block
+    import re
+    match = re.search(r"\{[^{}]*\}", raw, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    return None
 
 
 def make_planner(llm: LLMProvider, tool_registry: ToolRegistry, prompt_service: PromptService):
@@ -78,23 +108,62 @@ def make_planner(llm: LLMProvider, tool_registry: ToolRegistry, prompt_service: 
         )
 
         raw_content = response.content.strip()
-        try:
-            parsed = json.loads(raw_content)
-        except json.JSONDecodeError as exc:
-            logger.warning("planner_json_parse_error", trace_id=state.trace_id, error=str(exc))
+        logger.debug("planner_raw_response", trace_id=state.trace_id, raw=raw_content[:200])
+
+        # Try to parse — use lenient extractor to handle extra text
+        parsed = _try_parse_llm_json(raw_content)
+
+        if parsed is None:
+            logger.warning(
+                "planner_json_parse_error",
+                trace_id=state.trace_id,
+                raw_preview=raw_content[:100],
+            )
             raise ValidationError(
-                f"Planner returned non-JSON response: {exc}",
+                f"Planner returned non-JSON response",
                 errors=["json_parse_failed"],
-            ) from exc
+            )
+
+        # Fix common LLM mistakes before validation:
+        # 1. needs_tool as string "true"/"false" instead of boolean
+        if "needs_tool" in parsed and isinstance(parsed["needs_tool"], str):
+            parsed["needs_tool"] = parsed["needs_tool"].lower() == "true"
+
+        # 2. Missing reasoning field
+        if "reasoning" not in parsed:
+            parsed["reasoning"] = "No reasoning provided."
+
+        # 3. tool_name as "none" / "null" string instead of null
+        if parsed.get("tool_name") in ("none", "null", "None", "Null", ""):
+            parsed["tool_name"] = None
 
         try:
             output = PlannerOutput.model_validate(parsed)
         except PydanticValidationError as exc:
-            logger.warning("planner_schema_validation_error", trace_id=state.trace_id, error=str(exc))
+            logger.warning(
+                "planner_schema_validation_error",
+                trace_id=state.trace_id,
+                parsed=parsed,
+                error=str(exc),
+            )
             raise ValidationError(
                 f"Planner output failed schema validation: {exc}",
                 errors=["schema_validation_failed"],
             ) from exc
+
+        # Validate tool_name is actually registered
+        if output.needs_tool and output.tool_name not in tool_names:
+            logger.warning(
+                "planner_unknown_tool",
+                trace_id=state.trace_id,
+                tool_name=output.tool_name,
+                available=tool_names,
+            )
+            output = PlannerOutput(
+                needs_tool=False,
+                tool_name=None,
+                reasoning=f"Planner suggested unknown tool '{output.tool_name}', falling back to direct answer.",
+            )
 
         logger.info(
             "planner_decision",
@@ -111,7 +180,6 @@ def make_planner(llm: LLMProvider, tool_registry: ToolRegistry, prompt_service: 
         }
 
         if output.needs_tool and output.tool_name:
-            # Store the tool hint with EMPTY arguments — tool_selector fills them in.
             return {
                 **base,
                 "needs_tool": True,
