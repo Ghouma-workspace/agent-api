@@ -65,13 +65,25 @@ def traced_node(node_name: str, *, calls_llm: bool = False) -> Callable[[NodeFn]
                 lf_trace = _langfuse_trace_var.get()
                 lf_observation = None
                 node_input = _node_input_snapshot(state)
+
                 if lf_trace is not None:
                     if calls_llm:
-                        lf_observation = lf_trace.generation(
-                            name=node_name, model="groq", input=node_input
+                        # Extract the Langfuse prompt object if the node stored it
+                        # This links the generation to the prompt version in Langfuse
+                        # so the "Number of Generations" counter increments correctly
+                        langfuse_prompt = state.__dict__.get("_langfuse_prompt")
+                        generation_kwargs = dict(
+                            name=node_name,
+                            model="groq",
+                            input=node_input,
                         )
+                        if langfuse_prompt is not None:
+                            generation_kwargs["prompt"] = langfuse_prompt
+                        lf_observation = lf_trace.generation(**generation_kwargs)
                     else:
-                        lf_observation = lf_trace.span(name=node_name, input=node_input)
+                        lf_observation = lf_trace.span(
+                            name=node_name, input=node_input
+                        )
 
                 try:
                     result = await fn(state)
@@ -84,7 +96,15 @@ def traced_node(node_name: str, *, calls_llm: bool = False) -> Callable[[NodeFn]
                         lf_output = _safe_serialize(result)
                         if "reasoning" in result:
                             lf_output["_reasoning"] = result["reasoning"]
+
+                        langfuse_prompt = state.__dict__.get("_langfuse_prompt")
+                        if langfuse_prompt is not None:
+                            lf_observation.update(prompt=langfuse_prompt)
                         lf_observation.end(output=lf_output)
+
+                    # Clear the prompt object after use so it doesn't leak
+                    # to the next node
+                    state.__dict__.pop("_langfuse_prompt", None)
 
                     return result
 
@@ -92,14 +112,14 @@ def traced_node(node_name: str, *, calls_llm: bool = False) -> Callable[[NodeFn]
                     duration = time.perf_counter() - start
                     span.record_exception(exc)
                     AGENT_NODE_DURATION_SECONDS.labels(node=node_name).observe(duration)
-                    FAILURES_TOTAL.labels(component=node_name).inc()   # ← was missing
+                    FAILURES_TOTAL.labels(component=node_name).inc()
                     log.error("agent_node_error", error=str(exc), latency_ms=duration * 1000)
 
                     if lf_observation is not None:
                         lf_observation.end(output={"error": str(exc)}, level="ERROR")
 
+                    state.__dict__.pop("_langfuse_prompt", None)
                     raise
 
         return wrapper
-
     return decorator

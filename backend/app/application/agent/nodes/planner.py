@@ -89,6 +89,10 @@ def make_planner(llm: LLMProvider, tool_registry: ToolRegistry, prompt_service: 
         prompt_template = prompt_service.get("planner_system", fallback=PLANNER_SYSTEM_PROMPT)
         system_prompt = prompt_template.format(tool_names=", ".join(tool_names))
 
+        langfuse_prompt = prompt_service.get_prompt_object("planner_system")
+        if langfuse_prompt is not None:
+            state.__dict__["_langfuse_prompt"] = langfuse_prompt
+
         now = state.messages[-1].created_at if state.messages else datetime.now(UTC)
         planning_messages = [
             ChatMessage(

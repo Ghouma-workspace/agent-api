@@ -12,7 +12,6 @@ can answer from its own knowledge.
 
 from __future__ import annotations
 
-import json
 import uuid
 
 import structlog
@@ -57,6 +56,9 @@ def make_response_generator(llm: LLMProvider, prompt_service: PromptService):
         system_prompt = prompt_service.get(
             "response_generator_system", fallback=RESPONSE_GENERATOR_SYSTEM_PROMPT
         )
+        langfuse_prompt = prompt_service.get_prompt_object("response_generator_system")
+        if langfuse_prompt is not None:
+            state.__dict__["_langfuse_prompt"] = langfuse_prompt
 
         now = state.messages[-1].created_at if state.messages else (
             __import__("datetime").datetime.now(__import__("datetime").UTC)

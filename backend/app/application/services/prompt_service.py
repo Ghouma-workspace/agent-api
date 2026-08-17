@@ -31,6 +31,7 @@ class PromptService:
         """
         self._client = langfuse_client
         self._enable = enable
+        self._prompt_objects: dict[str, object] = {}
 
     def get(self, name: str, fallback: str) -> str:
         """Return the compiled prompt text for ``name`` from Langfuse.
@@ -39,21 +40,22 @@ class PromptService:
         SDK exceptions, or when Langfuse is disabled. Logs a warning so the on-call
         engineer knows which prompt fell back and why.
         """
-        if not self._enable:
-            return fallback
-
-        if self._client is None:
-            # Langfuse not configured (no public key); silently fall back.
+        if not self._enable or self._client is None:
             return fallback
 
         try:
-            prompt = self._client.get_prompt(name)
+            prompt = self._client.get_prompt(name, label="latest")
+            self._prompt_objects[name] = prompt
             compiled = prompt.compile()
-            return compiled
-        except Exception as exc:  # noqa: BLE001 — intentionally broad; infra must not crash app
+            return compiled.replace("{tool_names}", "{tool_names}")  # keep placeholder intact
+        except Exception as exc:  # noqa: BLE001
             logger.warning(
                 "prompt_service_fallback",
                 prompt_name=name,
                 reason=str(exc),
             )
             return fallback
+
+    def get_prompt_object(self, name: str) -> object | None:
+        """Return the raw Langfuse prompt object for linking to generations."""
+        return self._prompt_objects.get(name)

@@ -54,6 +54,9 @@ def make_tool_selector(llm: LLMProvider, tool_registry: ToolRegistry, prompt_ser
             schemas = all_schemas
 
         _ = prompt_service.get("tool_selector_system", fallback=TOOL_SELECTOR_SYSTEM_PROMPT)
+        langfuse_prompt = prompt_service.get_prompt_object("tool_selector_system")
+        if langfuse_prompt is not None:
+            state.__dict__["_langfuse_prompt"] = langfuse_prompt
 
         response = await llm.complete(state.messages, tools=schemas)
 

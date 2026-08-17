@@ -1,6 +1,5 @@
 {
   "title": "AI API Assistant — Platform Overview",
-  "uid": "platform-overview",
   "schemaVersion": 39,
   "time": { "from": "now-1h", "to": "now" },
   "refresh": "30s",
