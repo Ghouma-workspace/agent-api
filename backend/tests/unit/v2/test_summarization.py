@@ -16,6 +16,8 @@ import pytest
 
 from app.domain.entities.chat import ChatMessage, MessageRole
 
+from app.infrastructure.tasks import summarization as summarization_module
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -201,7 +203,7 @@ async def test_chat_service_does_not_raise_when_celery_unavailable():
 
     service = ChatService(mock_graph, mock_conversations, mock_messages, mock_langfuse)
 
-    with patch("app.infrastructure.tasks.summarization.summarize_conversation") as mock_task:
+    with patch.object(summarization_module, "summarize_conversation") as mock_task:
         mock_task.delay = MagicMock(side_effect=ConnectionError("Redis not available"))
         with patch("app.application.services.chat_service.trace") as mock_trace:
             mock_span = MagicMock()

@@ -49,10 +49,14 @@ def _normalize_arguments(arguments: dict) -> dict:
     whether the LLM returns integers or floats for numeric values."""
     normalized = {}
     for k, v in arguments.items():
-        if isinstance(v, int):
-            normalized[k] = float(v)   # 48 → 48.0
+        if isinstance(v, bool):
+            normalized[k] = v
         elif isinstance(v, str):
-            normalized[k] = v.strip().lower()  # "Paris" → "paris"
+            normalized[k] = v.strip().lower()
+        elif isinstance(v, int):
+            normalized[k] = float(v)
+        elif isinstance(v, dict):
+            normalized[k] = _normalize_arguments(v)
         else:
             normalized[k] = v
     return normalized
