@@ -5,10 +5,13 @@ Pure unit tests. Uses an in-memory fake Redis (dict-backed) so no container need
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app.domain.entities.chat import ToolResult
 from app.infrastructure.cache.tool_cache import ToolResultCache, _cache_key, _is_write_operation
+
 
 # ---------------------------------------------------------------------------
 # Fake Redis
@@ -48,6 +51,25 @@ def test_write_detection_post_value():
     assert _is_write_operation({"method": "POST", "body": "data"}) is True
 
 
+def test_write_detection_no_false_positive_on_substrings():
+    """Regression test: matching must be on whole words/tokens, not raw substrings.
+    "input"/"output"/"reputation"/"dispute"/"computing" all contain "put" as a
+    substring and were previously (incorrectly) flagged as write operations,
+    which silently disabled caching for a large share of ordinary read calls."""
+    assert _is_write_operation({"payload": "here is my input for the test"}) is False
+    assert _is_write_operation({"payload": "checking the output format"}) is False
+    assert _is_write_operation({"query": "reputation management tools"}) is False
+    assert _is_write_operation({"summary": "dispute resolution process doc"}) is False
+    assert _is_write_operation({"text": "just computing some stats"}) is False
+
+
+def test_write_detection_still_catches_compound_identifiers():
+    """Whole-word tokenization must still catch write intent inside
+    underscore-joined identifiers like "create_issue" or "delete_record"."""
+    assert _is_write_operation({"action": "create_issue", "repo": "acme/widgets"}) is True
+    assert _is_write_operation({"delete_record_id": "123"}) is True
+
+
 # ---------------------------------------------------------------------------
 # Cache key determinism
 # ---------------------------------------------------------------------------
@@ -63,6 +85,24 @@ def test_cache_key_differs_for_different_args():
     k1 = _cache_key("weather", {"city": "London"})
     k2 = _cache_key("weather", {"city": "Paris"})
     assert k1 != k2
+
+
+def test_cache_key_same_for_int_and_float_equivalent_args():
+    """An LLM emitting the integer form of a coordinate on one call and the
+    float form on another (48 vs 48.0) must still hit the same cache entry —
+    JSON Schema's "number" type doesn't distinguish them, so the cache key
+    shouldn't either."""
+    k_float = _cache_key("weather", {"latitude": 48.0, "longitude": 2.0})
+    k_int = _cache_key("weather", {"latitude": 48, "longitude": 2})
+    assert k_float == k_int
+
+
+def test_cache_key_bool_is_not_conflated_with_int():
+    """bool is a subclass of int in Python — must not be canonicalized to a
+    float, which would otherwise conflate `True`/`False` with `1`/`0`."""
+    k_bool = _cache_key("mock_api", {"verbose": True})
+    k_int = _cache_key("mock_api", {"verbose": 1})
+    assert k_bool != k_int
 
 
 # ---------------------------------------------------------------------------

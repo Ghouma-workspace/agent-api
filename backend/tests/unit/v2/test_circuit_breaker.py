@@ -11,10 +11,13 @@ Pure unit tests: fake Redis, no network.
 
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from app.domain.exceptions.base import ToolExecutionError
 from app.infrastructure.tools.circuit_breaker import CircuitBreaker, CircuitState
+
 
 # ---------------------------------------------------------------------------
 # Minimal in-memory Redis fake (get/set only — circuit breaker doesn't use
@@ -231,3 +234,77 @@ async def test_circuit_breaker_fail_open_on_redis_error():
     # Should succeed despite Redis being broken
     result = await cb.call("github", _ok())
     assert result == "result"
+
+
+# ---------------------------------------------------------------------------
+# S110 fix — _set_int/_set_float must log Redis errors, not swallow them silently
+# ---------------------------------------------------------------------------
+
+
+class BrokenSetRedis:
+    """get() works normally; set() always fails — isolates _set_int/_set_float
+    from the already-covered _get_state fail-open path above."""
+
+    def __init__(self) -> None:
+        self._store: dict[str, str] = {}
+
+    async def get(self, key: str) -> str | None:
+        return self._store.get(key)
+
+    async def set(self, key: str, value: str) -> None:
+        raise ConnectionError("Redis is down")
+
+
+@pytest.mark.asyncio
+async def test_set_int_logs_warning_on_redis_error(monkeypatch: pytest.MonkeyPatch):
+    from app.infrastructure.tools import circuit_breaker as circuit_breaker_module
+
+    warnings: list[tuple[str, dict]] = []
+    monkeypatch.setattr(
+        circuit_breaker_module.logger,
+        "warning",
+        lambda event, **kwargs: warnings.append((event, kwargs)),
+    )
+
+    cb = CircuitBreaker(BrokenSetRedis(), failure_threshold=5, recovery_timeout=60, success_threshold=2)
+    await cb._set_int("github", "failures", 3)  # must not raise
+
+    assert len(warnings) == 1
+    event, kwargs = warnings[0]
+    assert event == "circuit_breaker_redis_error"
+    assert kwargs["tool"] == "github"
+    assert kwargs["suffix"] == "failures"
+    assert "Redis is down" in kwargs["error"]
+
+
+@pytest.mark.asyncio
+async def test_set_float_logs_warning_on_redis_error(monkeypatch: pytest.MonkeyPatch):
+    from app.infrastructure.tools import circuit_breaker as circuit_breaker_module
+
+    warnings: list[tuple[str, dict]] = []
+    monkeypatch.setattr(
+        circuit_breaker_module.logger,
+        "warning",
+        lambda event, **kwargs: warnings.append((event, kwargs)),
+    )
+
+    cb = CircuitBreaker(BrokenSetRedis(), failure_threshold=5, recovery_timeout=60, success_threshold=2)
+    await cb._set_float("github", "opened_at", 12345.6)  # must not raise
+
+    assert len(warnings) == 1
+    event, kwargs = warnings[0]
+    assert event == "circuit_breaker_redis_error"
+    assert kwargs["tool"] == "github"
+    assert kwargs["suffix"] == "opened_at"
+    assert "Redis is down" in kwargs["error"]
+
+
+@pytest.mark.asyncio
+async def test_set_int_and_set_float_do_not_raise_even_though_they_no_longer_pass_silently(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Regression guard for the exact ruff S110 finding: swapping bare `pass` for
+    a log call must not reintroduce a raised exception up to the caller."""
+    cb = CircuitBreaker(BrokenSetRedis(), failure_threshold=5, recovery_timeout=60, success_threshold=2)
+    await cb._set_int("weather", "successes", 1)
+    await cb._set_float("weather", "opened_at", 1.0)

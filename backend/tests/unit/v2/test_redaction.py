@@ -14,6 +14,7 @@ from app.infrastructure.observability.redaction import (
     redacting_processor,
 )
 
+
 # ---------------------------------------------------------------------------
 # Sensitive key detection
 # ---------------------------------------------------------------------------

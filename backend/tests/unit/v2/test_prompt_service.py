@@ -5,7 +5,10 @@ Pure unit tests: no I/O, no DB, no Redis. Langfuse client is stubbed.
 
 from __future__ import annotations
 
+import pytest
+
 from app.application.services.prompt_service import PromptService
+
 
 # ---------------------------------------------------------------------------
 # Fake Langfuse client
@@ -25,7 +28,7 @@ class FakeLangfuseClient:
         self._prompts = prompts
         self._raise_on = raise_on
 
-    def get_prompt(self, name: str) -> FakeLangfusePrompt:
+    def get_prompt(self, name: str, label: str | None = None) -> FakeLangfusePrompt:
         if self._raise_on and name == self._raise_on:
             raise RuntimeError("Langfuse unreachable")
         if name not in self._prompts:
@@ -95,7 +98,7 @@ def test_prompt_service_never_raises_on_any_exception():
     """Any exception from Langfuse must be caught — system must not crash."""
 
     class BrokenClient:
-        def get_prompt(self, name: str):
+        def get_prompt(self, name: str, label: str | None = None):
             raise Exception("Totally unexpected error")  # noqa: TRY002
 
     svc = PromptService(BrokenClient(), enable=True)

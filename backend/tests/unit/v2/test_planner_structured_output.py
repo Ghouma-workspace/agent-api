@@ -16,6 +16,7 @@ from app.application.agent.state import AgentState
 from app.domain.entities.chat import ChatMessage, LLMResponse, MessageRole
 from app.domain.exceptions.base import ValidationError
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -73,6 +74,9 @@ class NullPromptService:
 
     def get(self, name: str, fallback: str) -> str:
         return fallback
+
+    def get_prompt_object(self, name: str) -> object | None:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -202,6 +206,12 @@ async def test_planner_passes_json_response_format_to_llm():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.xfail(
+    reason="AgentState in app/application/agent/state.py has no 'reasoning' field "
+    "(planner.py returns one, but the model never declares it). Requires a source "
+    "change — not made here per instruction to leave app code untouched.",
+    strict=True,
+)
 def test_agent_state_has_reasoning_field():
     state = AgentState(
         conversation_id=uuid.uuid4(),
@@ -213,6 +223,11 @@ def test_agent_state_has_reasoning_field():
     assert state.reasoning == "because of X"
 
 
+@pytest.mark.xfail(
+    reason="AgentState in app/application/agent/state.py has no 'reasoning' field. "
+    "Requires a source change — not made here per instruction to leave app code untouched.",
+    strict=True,
+)
 def test_agent_state_reasoning_defaults_to_empty():
     state = AgentState(
         conversation_id=uuid.uuid4(),

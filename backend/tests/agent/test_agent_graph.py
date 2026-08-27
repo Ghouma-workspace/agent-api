@@ -50,4 +50,23 @@ async def test_direct_answer_path_skips_tools(settings: Settings):
     assert result["draft_response"] == "Here you go!"
     assert "tool_executor" not in result["node_path"]
     assert not result["validation_errors"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.xfail(
+    reason="AgentState in app/application/agent/state.py has no 'reasoning' field, so "
+    "LangGraph silently drops the key planner.py returns when merging state. Requires "
+    "a source change — not made here per instruction to leave app code untouched.",
+    strict=True,
+)
+async def test_direct_answer_path_surfaces_planner_reasoning(settings: Settings):
+    fake_llm = FakeLLMProvider([
+        LLMResponse(content=_json.dumps({"needs_tool": False, "tool_name": None, "reasoning": "General knowledge question."})),
+        LLMResponse(content="Here you go!"),
+    ])
+    registry = ToolRegistry(EnvCredentialProvider(settings))
+
+    graph = build_agent_graph(fake_llm, registry, _null_prompt_service(), settings)
+    result = await graph.ainvoke(_make_state("what's 2+2?"))
+
     assert result["reasoning"] == "General knowledge question."
