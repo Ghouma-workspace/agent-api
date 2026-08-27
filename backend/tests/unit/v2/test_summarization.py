@@ -16,7 +16,6 @@ import pytest
 
 from app.domain.entities.chat import ChatMessage, MessageRole
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -65,7 +64,7 @@ async def test_chat_service_dispatches_on_every_20th_message():
     """ChatService.send_message must call summarize_conversation.delay when
     len(history) % 20 == 0."""
     from app.application.services.chat_service import ChatService
-    from app.domain.entities.chat import Conversation, LLMResponse
+    from app.domain.entities.chat import Conversation
 
     messages_20 = _make_messages(20)
     conv_id = uuid.uuid4()

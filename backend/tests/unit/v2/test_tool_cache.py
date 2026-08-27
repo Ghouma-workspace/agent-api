@@ -5,13 +5,10 @@ Pure unit tests. Uses an in-memory fake Redis (dict-backed) so no container need
 
 from __future__ import annotations
 
-import json
-
 import pytest
 
 from app.domain.entities.chat import ToolResult
 from app.infrastructure.cache.tool_cache import ToolResultCache, _cache_key, _is_write_operation
-
 
 # ---------------------------------------------------------------------------
 # Fake Redis

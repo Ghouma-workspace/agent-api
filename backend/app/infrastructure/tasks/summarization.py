@@ -10,7 +10,6 @@ The task uses llama-3.1-8b-instant — the cheap model — intentionally. Cost m
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 import structlog
 from groq import Groq
@@ -139,7 +138,7 @@ def _invalidate_redis_cache(conversation_id: str, settings) -> None:
         key = f"conv:memory:{conversation_id}"
         client.delete(key)
         client.close()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(
             "summarization_cache_invalidation_failed",
             conversation_id=conversation_id,

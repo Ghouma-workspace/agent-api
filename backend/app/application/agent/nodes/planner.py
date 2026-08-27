@@ -7,7 +7,8 @@ import uuid
 from datetime import UTC, datetime
 
 import structlog
-from pydantic import BaseModel, ValidationError as PydanticValidationError
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
 from app.application.agent.state import AgentState
 from app.application.services.prompt_service import PromptService
@@ -124,7 +125,7 @@ def make_planner(llm: LLMProvider, tool_registry: ToolRegistry, prompt_service: 
                 raw_preview=raw_content[:100],
             )
             raise ValidationError(
-                f"Planner returned non-JSON response",
+                "Planner returned non-JSON response",
                 errors=["json_parse_failed"],
             )
 

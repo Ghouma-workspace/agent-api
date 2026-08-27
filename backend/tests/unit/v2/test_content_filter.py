@@ -25,7 +25,6 @@ from app.application.agent.nodes.content_filter import (
 from app.application.agent.state import AgentState
 from app.domain.entities.chat import ChatMessage, MessageRole
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -139,7 +138,6 @@ async def test_content_filter_log_does_not_contain_user_message():
 
     with patch.object(structlog, "get_logger") as mock_get_logger:
         # Use a real structlog bound logger but capture the events
-        import structlog as sl
 
         # Capture via patching the warning call on the module logger
         original_warning = None

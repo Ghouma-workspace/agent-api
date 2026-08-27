@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 import structlog
 from prometheus_client import REGISTRY
 

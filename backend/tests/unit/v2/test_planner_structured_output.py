@@ -16,7 +16,6 @@ from app.application.agent.state import AgentState
 from app.domain.entities.chat import ChatMessage, LLMResponse, MessageRole
 from app.domain.exceptions.base import ValidationError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

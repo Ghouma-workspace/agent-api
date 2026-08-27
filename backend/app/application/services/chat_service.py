@@ -4,6 +4,7 @@ import time
 import uuid
 from uuid import UUID
 
+import structlog
 from opentelemetry import trace
 
 from app.application.agent.state import AgentState
@@ -16,11 +17,14 @@ from app.infrastructure.observability.agent_tracing import set_current_langfuse_
 from app.infrastructure.observability.langfuse_client import LangfuseTracker
 from app.infrastructure.observability.metrics import ACTIVE_USERS
 
+logger = structlog.get_logger()
+
 tracer = trace.get_tracer("ai-api-assistant.chat")
 
 # Track unique users active in the last 5 minutes using a simple in-process set.
 # For multi-process deployments this would move to Redis — sufficient for local dev.
 import time as _time
+
 _active_users: dict[str, float] = {}   # user_id -> last_seen timestamp
 _ACTIVE_WINDOW = 300                    # 5 minutes
 
@@ -110,8 +114,8 @@ class ChatService:
             if len(history) > 0 and len(history) % 20 == 0:
                 from app.infrastructure.tasks.summarization import summarize_conversation
                 summarize_conversation.delay(str(conversation_id))
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:
+            logger.warning("summarization_dispatch_failed", conversation_id=str(conversation_id), error=str(exc))
 
         return {
             "message": assistant_message,

@@ -61,7 +61,7 @@ class CircuitBreaker:
         try:
             raw = await self._redis.get(self._key(tool_name, "state"))
             return CircuitState(raw) if raw else CircuitState.CLOSED
-        except Exception:  # noqa: BLE001
+        except Exception:
             return CircuitState.CLOSED  # fail-open if Redis is unavailable
 
     async def _set_state(self, tool_name: str, state: CircuitState) -> None:
@@ -71,35 +71,36 @@ class CircuitBreaker:
                 _STATE_GAUGE_VALUES[state.value]
             )
             logger.info("circuit_breaker_state_change", tool=tool_name, state=state.value)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("circuit_breaker_redis_error", tool=tool_name, error=str(exc))
 
     async def _get_int(self, tool_name: str, suffix: str) -> int:
         try:
             raw = await self._redis.get(self._key(tool_name, suffix))
             return int(raw) if raw else 0
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            logger.warning("circuit_breaker_redis_error", tool=tool_name, suffix=suffix, error=str(exc))
             return 0
 
     async def _set_int(self, tool_name: str, suffix: str, value: int) -> None:
         try:
             await self._redis.set(self._key(tool_name, suffix), str(value))
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:
+            logger.warning("circuit_breaker_redis_error", tool=tool_name, suffix=suffix, error=str(exc))
 
     async def _get_float(self, tool_name: str, suffix: str) -> float:
         try:
             raw = await self._redis.get(self._key(tool_name, suffix))
             return float(raw) if raw else 0.0
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            logger.warning("circuit_breaker_redis_error", tool=tool_name, suffix=suffix, error=str(exc))
             return 0.0
 
     async def _set_float(self, tool_name: str, suffix: str, value: float) -> None:
         try:
             await self._redis.set(self._key(tool_name, suffix), str(value))
-        except Exception:  # noqa: BLE001
-            pass
-
+        except Exception as exc:
+            logger.warning("circuit_breaker_redis_error", tool=tool_name, suffix=suffix, error=str(exc))
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------

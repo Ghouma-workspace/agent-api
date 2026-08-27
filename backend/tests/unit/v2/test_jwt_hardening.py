@@ -12,7 +12,7 @@ from jose import jwt as jose_jwt
 
 from app.core.config import Settings
 from app.domain.exceptions.base import AuthenticationError
-from app.infrastructure.security.jwt import JWTService, _AUDIENCE
+from app.infrastructure.security.jwt import _AUDIENCE, JWTService
 
 
 @pytest.fixture

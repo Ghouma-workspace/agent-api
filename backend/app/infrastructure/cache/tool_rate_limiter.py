@@ -69,7 +69,7 @@ class ToolRateLimiter:
             pipe.expire(key, _KEY_TTL)
             results = await pipe.execute()
             current_count = results[1]  # zcard result
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning(
                 "tool_rate_limiter_redis_error",
                 tool=tool_name,

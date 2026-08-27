@@ -72,11 +72,11 @@ def traced_node(node_name: str, *, calls_llm: bool = False) -> Callable[[NodeFn]
                         # This links the generation to the prompt version in Langfuse
                         # so the "Number of Generations" counter increments correctly
                         langfuse_prompt = state.__dict__.get("_langfuse_prompt")
-                        generation_kwargs = dict(
-                            name=node_name,
-                            model="groq",
-                            input=node_input,
-                        )
+                        generation_kwargs = {
+                            "name": node_name,
+                            "model": "groq",
+                            "input": node_input,
+                        }
                         if langfuse_prompt is not None:
                             generation_kwargs["prompt"] = langfuse_prompt
                         lf_observation = lf_trace.generation(**generation_kwargs)

@@ -1,6 +1,6 @@
 """Admin router — serves the AdminPage.tsx dashboard data."""
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 
 from app.api.deps.auth import get_current_user_id
 from app.api.deps.services import get_admin_service

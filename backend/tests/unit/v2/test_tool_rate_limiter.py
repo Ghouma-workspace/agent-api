@@ -12,7 +12,6 @@ import pytest
 from app.domain.exceptions.base import ToolExecutionError
 from app.infrastructure.cache.tool_rate_limiter import ToolRateLimiter
 
-
 # ---------------------------------------------------------------------------
 # In-memory Redis sorted-set fake
 # ---------------------------------------------------------------------------
@@ -26,7 +25,7 @@ class FakeSortedSetRedis:
         self._sets: dict[str, list[tuple[float, str]]] = {}
         self._ttls: dict[str, int] = {}
 
-    def pipeline(self) -> "FakePipeline":
+    def pipeline(self) -> FakePipeline:
         return FakePipeline(self)
 
     def _zremrangebyscore(self, key: str, min_score, max_score) -> int:

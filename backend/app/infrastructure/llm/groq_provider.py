@@ -69,12 +69,12 @@ class GroqProvider:
     ) -> LLMResponse:
         start = time.perf_counter()
         try:
-            create_kwargs: dict = dict(
-                model=self._model,
-                messages=self._to_groq_messages(messages),
-                tools=tools or None,
-                timeout=self._timeout,
-            )
+            create_kwargs: dict = {
+                "model": self._model,
+                "messages": self._to_groq_messages(messages),
+                "tools": tools or None,
+                "timeout": self._timeout,
+            }
             if response_format is not None:
                 create_kwargs["response_format"] = response_format
             response = await self._client.chat.completions.create(**create_kwargs)

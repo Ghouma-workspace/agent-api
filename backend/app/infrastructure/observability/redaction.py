@@ -26,7 +26,7 @@ _TRUNCATED_KEEP = 50
 _REDACTED = "[REDACTED]"
 
 
-def redact(obj: Any) -> Any:  # noqa: ANN401
+def redact(obj: Any) -> Any:
     """Recursively redact sensitive values from a dict/list structure.
 
     - Dict keys matching _SENSITIVE_PATTERNS → value replaced with "[REDACTED]".
@@ -44,7 +44,7 @@ def redact(obj: Any) -> Any:  # noqa: ANN401
     return obj
 
 
-def _redact_value(key: str, value: Any) -> Any:  # noqa: ANN401
+def _redact_value(key: str, value: Any) -> Any:
     if _SENSITIVE_PATTERNS.search(str(key)):
         return _REDACTED
     return redact(value)
@@ -55,7 +55,7 @@ def _redact_value(key: str, value: Any) -> Any:  # noqa: ANN401
 # ---------------------------------------------------------------------------
 
 
-def redacting_processor(logger: Any, method: str, event_dict: dict) -> dict:  # noqa: ANN401
+def redacting_processor(logger: Any, method: str, event_dict: dict) -> dict:
     """structlog processor that redacts the entire event_dict.
 
     Place this after _inject_context and before JSONRenderer in the processor chain.

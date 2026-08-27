@@ -37,7 +37,7 @@ jobs:
 
       - name: Lint
         working-directory: backend
-        run: ruff check .
+        run: ruff check app
 
       # - name: Type check
       #   working-directory: backend

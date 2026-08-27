@@ -8,7 +8,7 @@ V2 additions:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -70,9 +70,8 @@ class AuthService:
 
         # V2: validate device binding
         stored_device_id = await self._sessions.get_device_id(payload.jti)
-        if stored_device_id is not None and device_id is not None:
-            if stored_device_id != device_id:
-                raise AuthenticationError("Device ID mismatch — refresh token cannot be used from this device")
+        if stored_device_id is not None and device_id is not None and stored_device_id != device_id:
+            raise AuthenticationError("Device ID mismatch — refresh token cannot be used from this device")
 
         # Update IP before revoking so we capture the last access
         if client_ip and payload.jti:

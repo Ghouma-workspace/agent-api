@@ -11,13 +11,10 @@ Pure unit tests: fake Redis, no network.
 
 from __future__ import annotations
 
-import time
-
 import pytest
 
 from app.domain.exceptions.base import ToolExecutionError
 from app.infrastructure.tools.circuit_breaker import CircuitBreaker, CircuitState
-
 
 # ---------------------------------------------------------------------------
 # Minimal in-memory Redis fake (get/set only — circuit breaker doesn't use

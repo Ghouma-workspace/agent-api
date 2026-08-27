@@ -5,10 +5,7 @@ Pure unit tests: no I/O, no DB, no Redis. Langfuse client is stubbed.
 
 from __future__ import annotations
 
-import pytest
-
 from app.application.services.prompt_service import PromptService
-
 
 # ---------------------------------------------------------------------------
 # Fake Langfuse client

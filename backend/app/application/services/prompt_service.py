@@ -48,7 +48,7 @@ class PromptService:
             self._prompt_objects[name] = prompt
             compiled = prompt.compile()
             return compiled.replace("{tool_names}", "{tool_names}")  # keep placeholder intact
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning(
                 "prompt_service_fallback",
                 prompt_name=name,

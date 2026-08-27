@@ -108,7 +108,7 @@ class Container:
 
         self.tool_service = ToolService(self.tool_registry)
 
-    def request_scope(self, session: AsyncSession) -> "RequestScope":
+    def request_scope(self, session: AsyncSession) -> RequestScope:
         return RequestScope(self, session)
 
 

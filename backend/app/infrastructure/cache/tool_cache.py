@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 
 import structlog
 from redis.asyncio import Redis
-import re
 
 from app.domain.entities.chat import ToolResult
 from app.infrastructure.observability.metrics import CACHE_HITS_TOTAL, CACHE_MISSES_TOTAL
@@ -79,7 +79,7 @@ class ToolResultCache:
         key = _cache_key(tool_name, arguments)
         try:
             raw = await self._redis.get(key)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("tool_cache_get_error", tool=tool_name, error=str(exc))
             CACHE_MISSES_TOTAL.labels(cache_name="tool_result").inc()
             return None
@@ -93,7 +93,7 @@ class ToolResultCache:
             CACHE_HITS_TOTAL.labels(cache_name="tool_result").inc()
             logger.debug("tool_cache_hit", tool=tool_name, key=key)
             return result
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("tool_cache_deserialize_error", tool=tool_name, error=str(exc))
             CACHE_MISSES_TOTAL.labels(cache_name="tool_result").inc()
             return None
@@ -108,5 +108,5 @@ class ToolResultCache:
         try:
             await self._redis.set(key, result.model_dump_json(), ex=ttl_seconds)
             logger.debug("tool_cache_set", tool=tool_name, key=key, ttl=ttl_seconds)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("tool_cache_set_error", tool=tool_name, error=str(exc))
